@@ -2,7 +2,7 @@
 
 Go client library to interact with the Intel AMT api (via wsman)
 
-**Fork of github.com/ammmze/go-amt**
+**Fork of [github.com/ammmze/go-amt](https://github.com/ammmze/go-amt)**
 
 ## Usage
 

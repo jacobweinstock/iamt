@@ -1,6 +1,6 @@
-**Fork of github.com/ammmze/wsman**
-
 This is a WSMAN library for Go.
+
+**Fork of [github.com/ammmze/wsman](https://github.com/ammmze/wsman)**
 
 It mostly adheres to the DMTF specifications at
 http://www.dmtf.org/standards/wsman, except where it does not.
