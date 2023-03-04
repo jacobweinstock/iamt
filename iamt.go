@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/jacobweinstock/iamt/internal"
-	"github.com/jacobweinstock/iamt/wsman"
+	"github.com/jacobweinstock/iamt/internal/wsman"
 )
 
 // Client used to perform actions on the machine.

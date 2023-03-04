@@ -7,7 +7,7 @@ import (
 
 	"github.com/VictorLowther/simplexml/dom"
 	"github.com/go-logr/logr"
-	"github.com/jacobweinstock/iamt/wsman"
+	"github.com/jacobweinstock/iamt/internal/wsman"
 )
 
 //go:generate stringer -type=powerState -linecomment -output=power_string.go
