@@ -1,5 +1,3 @@
-//go:generate stringer -type=powerState -trimprefix=powerState -linecomment
-
 package internal
 
 import (
@@ -12,31 +10,33 @@ import (
 	"github.com/jacobweinstock/iamt/wsman"
 )
 
+//go:generate stringer -type=powerState -linecomment -output=power_string.go
+
 type powerState int
 
 // https://software.intel.com/sites/manageability/AMT_Implementation_and_Reference_Guide/HTMLDocuments/WS-Management_Class_Reference/CIM_AssociatedPowerManagementService.htm#powerState
 // https://software.intel.com/sites/manageability/AMT_Implementation_and_Reference_Guide/default.htm?turl=WordDocuments%2Fgetsystempowerstate.htm
 const (
-	powerStateUnknown                   powerState = 0
-	powerStateOther                     powerState = 1
-	powerStateOn                        powerState = 2
-	powerStateSleepLight                powerState = 3
-	powerStateSleepDeep                 powerState = 4
-	powerStatePowerCycleOffSoft         powerState = 5
-	powerStateOffHard                   powerState = 6
-	powerStateHibernateOffSoft          powerState = 7
-	powerStateOffSoft                   powerState = 8
-	powerStatePowerCycleOffHard         powerState = 9
-	powerStateMasterBusReset            powerState = 10
-	powerStateDiagnosticInterruptNMI    powerState = 11
-	powerStateOffSoftGraceful           powerState = 12
-	powerStateOffHardGraceful           powerState = 13
-	powerStateMasterBusResetGraceful    powerState = 14
-	powerStatePowerCycleOffSoftGraceful powerState = 15
-	powerStatePowerCycleOffHardGraceful powerState = 16
-	powerStateDiagnosticInterruptInit   powerState = 17
-	// DMTF Reserverd = ..
-	// Vendor Specific = 0x7FFF..0xFFFF
+	unknown                   powerState = 0
+	other                     powerState = 1
+	stateOn                   powerState = 2
+	sleepLight                powerState = 3
+	sleepDeep                 powerState = 4
+	powerCycleOffSoft         powerState = 5
+	offHard                   powerState = 6
+	hibernateOffSoft          powerState = 7
+	offSoft                   powerState = 8
+	powerCycleOffHard         powerState = 9
+	masterBusReset            powerState = 10
+	diagnosticInterruptNMI    powerState = 11
+	offSoftGraceful           powerState = 12
+	offHardGraceful           powerState = 13
+	masterBusResetGraceful    powerState = 14
+	powerCycleOffSoftGraceful powerState = 15
+	powerCycleOffHardGraceful powerState = 16
+	diagnosticInterruptInit   powerState = 17
+	// DMTF Reserved = ..
+	// Vendor Specific = 0x7FFF..0xFFFF.
 )
 
 type powerStatus struct {
@@ -100,8 +100,8 @@ func (c *Client) PowerOn(ctx context.Context) error {
 	if isOn {
 		return nil
 	}
-	_, err = c.requestpowerState(ctx, powerStateOn)
-	return err
+
+	return c.requestpowerState(ctx, stateOn)
 }
 
 func (c *Client) PowerOff(ctx context.Context) error {
@@ -111,10 +111,8 @@ func (c *Client) PowerOff(ctx context.Context) error {
 	}
 	if isPoweredOnGivenStatus(c.Log, status) {
 		request := selectNextState(getPowerOffStates(), status.AvailableRequestedpowerStates)
-		if request != powerStateUnknown {
-			_, err := c.requestpowerState(ctx, request)
-
-			return err
+		if request != unknown {
+			return c.requestpowerState(ctx, request)
 		}
 
 		return fmt.Errorf("there is no implemented transition state to power off the machine from the current machine state %q. available states are: %v", status.powerState, status.AvailableRequestedpowerStates)
@@ -136,8 +134,7 @@ func (c *Client) PowerCycle(ctx context.Context) error {
 	request := selectNextState(getPowerCycleStates(), status.AvailableRequestedpowerStates)
 
 	if request >= 0 {
-		_, err := c.requestpowerState(ctx, request)
-		return err
+		return c.requestpowerState(ctx, request)
 	}
 
 	return fmt.Errorf("there is no implemented transition state to power cycle the machine from the current machine state %d. available states are: %v", status.powerState, status.AvailableRequestedpowerStates)
@@ -154,7 +151,7 @@ func (c *Client) IsPoweredOn(ctx context.Context) (bool, error) {
 func isPoweredOnGivenStatus(log logr.Logger, status *powerStatus) bool {
 	log.V(1).Info("states", "currentState", fmt.Sprintf("%v", status.powerState), "availableStates", fmt.Sprintf("%v", status.AvailableRequestedpowerStates))
 	switch status.powerState {
-	case powerStateOn:
+	case stateOn:
 		return true
 	default:
 		return false
@@ -162,44 +159,43 @@ func isPoweredOnGivenStatus(log logr.Logger, status *powerStatus) bool {
 }
 
 // https://software.intel.com/sites/manageability/AMT_Implementation_and_Reference_Guide/default.htm?turl=WordDocuments%2Fchangesystempowerstate.htm
-func (c *Client) requestpowerState(ctx context.Context, requestedpowerState powerState) (int, error) {
+func (c *Client) requestpowerState(ctx context.Context, requestedpowerState powerState) error {
 	status, err := c.getPowerStatus(ctx)
 	if err != nil {
-		return -1, err
+		return err
 	}
 	if !containspowerState(status.AvailableRequestedpowerStates, requestedpowerState) {
-		return -1, fmt.Errorf("there is no implemented transition state to <%d> from the current machine state <%d>. available states are: %v", requestedpowerState, status.powerState, status.AvailableRequestedpowerStates)
+		return fmt.Errorf("there is no implemented transition state to <%d> from the current machine state <%d>. available states are: %v", requestedpowerState, status.powerState, status.AvailableRequestedpowerStates)
 	}
 	c.Log.V(1).Info("sending request to machine", "PowerState", requestedpowerState)
 	message := c.WsmanClient.Invoke(resourceCIMPowerManagementService, "RequestPowerStateChange")
 	message.Parameters("PowerState", fmt.Sprint(int(requestedpowerState)))
 	managedElement, err := c.makeManagedElement(ctx, message)
 	if err != nil {
-		return -1, err
+		return err
 	}
 	message.AddParameter(managedElement)
 
 	response, err := message.Send(ctx)
 	if err != nil {
-		return -1, err
+		return err
 	}
 
 	body := response.GetBody(dom.Elem("RequestPowerStateChange_OUTPUT", resourceCIMPowerManagementService))
 	if body == nil || len(body.Children()) != 1 {
-		return -1, fmt.Errorf("received unknown response requesting power state change: %v", response)
+		return fmt.Errorf("received unknown response requesting power state change: %v", response)
 	}
 	val, err := strconv.Atoi(string(body.Children()[0].Content))
 	if err != nil {
-		return -1, err
+		return err
 	}
 	c.Log.V(1).Info("RequestPowerState response", "response", val)
 
-	return val, nil
+	return nil
 }
 
 func getPowerManagementElements(response *wsman.Message) ([]*dom.Element, error) {
 	items, err := response.EnumItems()
-
 	if err != nil {
 		return nil, err
 	}
@@ -227,21 +223,21 @@ func (c *Client) makeManagedElement(ctx context.Context, message *wsman.Message)
 
 func getPowerOffStates() []powerState {
 	return []powerState{
-		powerStateOffSoftGraceful,
-		powerStateOffSoft,
-		powerStateOffHardGraceful,
-		powerStateOffHard,
+		offSoftGraceful,
+		offSoft,
+		offHardGraceful,
+		offHard,
 	}
 }
 
 func getPowerCycleStates() []powerState {
 	return []powerState{
-		powerStatePowerCycleOffSoftGraceful,
-		powerStatePowerCycleOffSoft,
-		powerStateMasterBusResetGraceful,
-		powerStatePowerCycleOffHardGraceful,
-		powerStatePowerCycleOffHard,
-		powerStateMasterBusReset,
+		powerCycleOffSoftGraceful,
+		powerCycleOffSoft,
+		masterBusResetGraceful,
+		powerCycleOffHardGraceful,
+		powerCycleOffHard,
+		masterBusReset,
 	}
 }
 
@@ -251,7 +247,7 @@ func selectNextState(requestedStates []powerState, availableStates []powerState)
 			return a
 		}
 	}
-	return powerStateUnknown
+	return unknown
 }
 
 func containspowerState(s []powerState, e powerState) bool {

@@ -10,7 +10,7 @@ import (
 	"github.com/jacobweinstock/iamt/wsman"
 )
 
-// Client used to perform actions on the machine
+// Client used to perform actions on the machine.
 type Client struct {
 	Host   string
 	Port   uint32

@@ -28,7 +28,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// Message represents WSMAN messages
+// Message represents WSMAN messages.
 type Message struct {
 	*soap.Message
 	client *Client
@@ -41,7 +41,7 @@ type Message struct {
 // Resource turns a resource URI into an appropriate DOM element
 // for inclusion in the SOAP header.
 func Resource(uri string) *dom.Element {
-	return soap.MuElemC("ResourceURI", NS_WSMAN, uri)
+	return soap.MuElemC("ResourceURI", NSWSMAN, uri)
 }
 
 // NewMessage creates a new wsman.Message that can be sent
@@ -53,16 +53,16 @@ func (c *Client) NewMessage(action string) (msg *Message) {
 		client:  c,
 	}
 	msg.SetHeader(
-		soap.MuElemC("Action", NS_WSA, action),
-		soap.MuElemC("To", NS_WSA, c.target),
-		soap.MuElemC("MessageID", NS_WSA, fmt.Sprintf("uuid:%s", uuid.NewV4())),
-		dom.Elem("ReplyTo", NS_WSA).AddChild(
-			soap.MuElemC("Address", NS_WSA,
+		soap.MuElemC("Action", NSWSA, action),
+		soap.MuElemC("To", NSWSA, c.target),
+		soap.MuElemC("MessageID", NSWSA, fmt.Sprintf("uuid:%s", uuid.NewV4())),
+		dom.Elem("ReplyTo", NSWSA).AddChild(
+			soap.MuElemC("Address", NSWSA,
 				"http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous")))
 	return msg
 }
 
-// Options are used to modify how certian WSMAN operations work.
+// Options are used to modify how certain WSMAN operations work.
 // For now, the only thing we use it for is to make EnumerateEPR work.
 // See http://www.dmtf.org/sites/default/files/standards/documents/DSP0226_1.2.0.pdf,
 // section 6.4 for more information.
@@ -119,13 +119,13 @@ func (c *Client) NewMessage(action string) (msg *Message) {
 // MakeOption makes an element that can be added as an option to the
 // message header with AddOption.
 func (m *Message) MakeOption(name string) *dom.Element {
-	return dom.Elem("Option", NS_WSMAN).Attr("Name", "", name)
+	return dom.Elem("Option", NSWSMAN).Attr("Name", "", name)
 }
 
 // AddOption adds any number of elements (created with MakeOption) to
 // the message header.
 func (m *Message) AddOption(options ...*dom.Element) *Message {
-	optset := dom.Elem("OptionSet", NS_WSMAN)
+	optset := dom.Elem("OptionSet", NSWSMAN)
 	if found := m.GetHeader(optset); found != nil {
 		optset = found
 	} else {
@@ -136,7 +136,7 @@ func (m *Message) AddOption(options ...*dom.Element) *Message {
 }
 
 // Options is a fast way of creating options that are basically
-// key/value pairs
+// key/value pairs.
 func (m *Message) Options(opts ...string) *Message {
 	if len(opts)%2 != 0 {
 		panic("message.Options passed an odd number of args!")
@@ -152,29 +152,29 @@ func (m *Message) Options(opts ...string) *Message {
 
 // GHC gets the contents of a specific Header field.
 func (m *Message) GHC(field string) (string, error) {
-	h := m.GetHeader(dom.Elem(field, NS_WSA))
+	h := m.GetHeader(dom.Elem(field, NSWSA))
 	if h == nil {
 		return "", fmt.Errorf("Message has no header %s", field)
 	}
 	return string(h.Content), nil
 }
 
-// ResourceURI sets the ResourceURI header of the message
+// ResourceURI sets the ResourceURI header of the message.
 func (m *Message) ResourceURI(resource string) *Message {
 	m.SetHeader(Resource(resource))
 	return m
 }
 
 // MakeSelector makes an element that can be added to the message with
-// AddSelector
+// AddSelector.
 func (m *Message) MakeSelector(name string) *dom.Element {
-	return dom.Elem("Selector", NS_WSMAN).Attr("Name", "", name)
+	return dom.Elem("Selector", NSWSMAN).Attr("Name", "", name)
 }
 
 // AddSelector adds any number of elements (created with MakeSelector)
 // to the message.
 func (m *Message) AddSelector(selector ...*dom.Element) *Message {
-	selset := dom.Elem("SelectorSet", NS_WSMAN)
+	selset := dom.Elem("SelectorSet", NSWSMAN)
 	if found := m.GetHeader(selset); found != nil {
 		selset = found
 	} else {
@@ -216,7 +216,7 @@ func (m *Message) paramNamespace() (psetNamespace, psetName string) {
 }
 
 // MakeParameter makes an element which can be added to the message
-// with AddParameter
+// with AddParameter.
 func (m *Message) MakeParameter(name string) *dom.Element {
 	resourceNS, _ := m.paramNamespace()
 	return dom.Elem(name, resourceNS)
@@ -254,14 +254,14 @@ func (m *Message) Parameters(args ...string) *Message {
 }
 
 func (m *Message) GetResource() string {
-	hdr := search.First(search.Tag("ResourceURI", NS_WSMAN), m.AllHeaderElements())
+	hdr := search.First(search.Tag("ResourceURI", NSWSMAN), m.AllHeaderElements())
 	if hdr == nil {
 		panic("No ResourceURI")
 	}
 	return string(hdr.Content)
 }
 
-// MakeValue makes an element that can be used to set a new instance value for a Put call
+// MakeValue makes an element that can be used to set a new instance value for a Put call.
 func (m *Message) MakeValue(name string) *dom.Element {
 	ns := m.GetResource()
 	return dom.Elem(name, ns)
@@ -298,7 +298,7 @@ func (m *Message) Values(args ...string) *Message {
 
 // Send sends a message to the endpoint of the Client it was
 // constructed with, and returns either the Message that was
-// returned, or an error statung what went wrong.
+// returned, or an error stating what went wrong.
 func (m *Message) Send(ctx context.Context) (*Message, error) {
 	res, err := m.client.Post(ctx, m.Message)
 	if err != nil {
@@ -306,7 +306,8 @@ func (m *Message) Send(ctx context.Context) (*Message, error) {
 	}
 	msg := &Message{Message: res, client: m.client}
 	if m.replyHelper != nil {
-		err = m.replyHelper(ctx, m, msg)
+		// TODO: figure out how to handle this error
+		_ = m.replyHelper(ctx, m, msg)
 	}
 	if msg.Fault() != nil {
 		return msg, errors.New("SOAP Fault")

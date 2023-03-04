@@ -25,42 +25,42 @@ import (
 )
 
 func (c *Client) enumRelease(ctx context.Context, elem *dom.Element) {
-	req := c.NewMessage(RELEASE)
-	body := dom.Elem("Release", NS_WSMEN)
-	req.SetBody(body)
-	body.AddChild(elem)
-	req.Send(ctx)
+	req := c.NewMessage(Release)
+	body := dom.Elem("Release", NSWSMEN)
+	_ = req.SetBody(body)
+	_ = body.AddChild(elem)
+	_, _ = req.Send(ctx)
 }
 
 func enumHelper(ctx context.Context, firstreq, resp *Message) error {
-	searchContext := search.Tag("EnumerationContext", NS_WSMEN)
-	searchEnd := search.Tag("EndOfSequence", NS_WSMAN)
+	searchContext := search.Tag("EnumerationContext", NSWSMEN)
+	searchEnd := search.Tag("EndOfSequence", NSWSMAN)
 	if search.First(searchEnd, resp.AllBodyElements()) != nil {
 		return nil
 	}
-	context := search.First(searchContext, resp.AllBodyElements())
+	first := search.First(searchContext, resp.AllBodyElements())
 	items := search.First(search.Tag("Items", "*"), resp.AllBodyElements())
-	resource := firstreq.GetHeader(dom.Elem("ResourceURI", NS_WSMAN))
-	maxElem := search.First(search.Tag("MaxElements", NS_WSMAN), firstreq.AllBodyElements())
-	enumEpr := search.First(search.Tag("EnumerationMode", NS_WSMAN), firstreq.AllBodyElements())
+	resource := firstreq.GetHeader(dom.Elem("ResourceURI", NSWSMAN))
+	maxElem := search.First(search.Tag("MaxElements", NSWSMAN), firstreq.AllBodyElements())
+	enumEpr := search.First(search.Tag("EnumerationMode", NSWSMAN), firstreq.AllBodyElements())
 	if resource == nil {
 		return fmt.Errorf("WSMAN Enumerate request did not have RequestURI")
 	}
 	if items == nil {
 		enumResp := search.First(search.Tag("EnumerateResponse", "*"), resp.AllBodyElements())
 		if enumResp == nil {
-			return fmt.Errorf("Enumeration response did not have EnumerateResponse body element")
+			return fmt.Errorf("enumeration response did not have EnumerateResponse body element")
 		}
-		items = dom.Elem("Items", NS_WSMAN)
+		items = dom.Elem("Items", NSWSMAN)
 		enumResp.AddChild(items)
 	}
 
-	for context != nil {
-		req := resp.client.NewMessage(PULL)
+	for first != nil {
+		req := resp.client.NewMessage(Pull)
 		req.SetHeader(resource)
-		body := dom.Elem("Pull", NS_WSMEN)
+		body := dom.Elem("Pull", NSWSMEN)
 		req.SetBody(body)
-		body.AddChild(context)
+		body.AddChild(first)
 		if maxElem != nil {
 			body.AddChild(maxElem)
 		}
@@ -69,10 +69,10 @@ func enumHelper(ctx context.Context, firstreq, resp *Message) error {
 		}
 		nextResp, err := req.Send(ctx)
 		if err != nil {
-			resp.client.enumRelease(ctx, context)
+			resp.client.enumRelease(ctx, first)
 			return err
 		}
-		context = search.First(searchContext, nextResp.AllBodyElements())
+		first = search.First(searchContext, nextResp.AllBodyElements())
 		extraItems := search.First(search.Tag("Items", "*"), nextResp.AllBodyElements())
 		if extraItems != nil {
 			items.AddChildren(extraItems.Children()...)
@@ -84,18 +84,18 @@ func enumHelper(ctx context.Context, firstreq, resp *Message) error {
 	return nil
 }
 
-func (c *Client) enumerate(resource string, epr, optimize bool) *Message {
-	req := c.NewMessage(ENUMERATE).ResourceURI(resource)
-	body := dom.Elem("Enumerate", NS_WSMEN)
+func (c *Client) doEnumerate(resource string, epr, optimize bool) *Message {
+	req := c.NewMessage(Enumerate).ResourceURI(resource)
+	body := dom.Elem("Enumerate", NSWSMEN)
 	req.SetBody(body)
 	if optimize {
-		optimizeEnum := dom.Elem("OptimizeEnumeration", NS_WSMAN)
-		maxElem := dom.ElemC("MaxElements", NS_WSMAN, "100")
+		optimizeEnum := dom.Elem("OptimizeEnumeration", NSWSMAN)
+		maxElem := dom.ElemC("MaxElements", NSWSMAN, "100")
 		maxElem.Content = []byte("100")
 		body.AddChildren(optimizeEnum, maxElem)
 	}
 	if epr {
-		enumEpr := dom.Elem("EnumerationMode", NS_WSMAN)
+		enumEpr := dom.Elem("EnumerationMode", NSWSMAN)
 		enumEpr.Content = []byte("EnumerateEPR")
 		body.AddChild(enumEpr)
 	}
@@ -106,24 +106,24 @@ func (c *Client) enumerate(resource string, epr, optimize bool) *Message {
 // Enumerate creates a wsman.Message that will enumerate all the objects
 // available at resource.  If there are many objects, it will arrange
 // for the appropriate series of wsman Pull calls to be performed, so you can
-// be certian that the response to this message has all the objects you specify.
+// be certain that the response to this message has all the objects you specify.
 func (c *Client) Enumerate(resource string) *Message {
-	return c.enumerate(resource, false, c.OptimizeEnum)
+	return c.doEnumerate(resource, false, c.OptimizeEnum)
 }
 
 // EnumerateEPR creates a message that will enumerate the endpoints for a given resource.
 func (c *Client) EnumerateEPR(resource string) *Message {
-	return c.enumerate(resource, true, c.OptimizeEnum)
+	return c.doEnumerate(resource, true, c.OptimizeEnum)
 }
 
 func (m *Message) EnumItems() ([]*dom.Element, error) {
 	action, err := m.GHC("Action")
-	if err != nil || action != ENUMERATE+"Response" {
-		return nil, fmt.Errorf("Not an EnumerateResponse message!")
+	if err != nil || action != Enumerate+"Response" {
+		return nil, fmt.Errorf("not an EnumerateResponse message")
 	}
-	items := search.First(search.Tag("Items", NS_WSMAN), m.AllBodyElements())
+	items := search.First(search.Tag("Items", NSWSMAN), m.AllBodyElements())
 	if items == nil {
-		return nil, fmt.Errorf("No items returned from EnumItems")
+		return nil, fmt.Errorf("no items returned from EnumItems")
 	}
 	return items.Children(), nil
 }

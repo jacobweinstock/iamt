@@ -1,5 +1,3 @@
-//go:generate stringer -type=bootConfigRole -trimprefix=bootConfigRole -linecomment
-
 package internal
 
 import (
@@ -11,16 +9,18 @@ import (
 	"github.com/VictorLowther/simplexml/search"
 )
 
+//go:generate stringer -type=bootConfigRole -linecomment -output=boot_string.go
 type bootConfigRole int
 
 const (
-	bootConfigRoleIsNext          bootConfigRole = 0
-	bootConfigRoleIsNextSingleUse bootConfigRole = 1
-	bootConfigRoleIsDefault       bootConfigRole = 2
-	bootConfigRoleDMTFReserved    bootConfigRole = 3     // 3..32767
-	bootConfigRoleVendorSpecified bootConfigRole = 32768 // 32768..65535
-	resourceAMTBootSettingData                   = "http://intel.com/wbem/wscim/1/amt-schema/1/AMT_BootSettingData"
+	isNext          bootConfigRole = 0
+	isNextSingleUse bootConfigRole = 1
+	isDefault       bootConfigRole = 2
+	dmtfReserved    bootConfigRole = 3     // 3..32767
+	vendorSpecified bootConfigRole = 32768 // 32768..65535
 )
+
+const resourceAMTBootSettingData = "http://intel.com/wbem/wscim/1/amt-schema/1/AMT_BootSettingData"
 
 func (c *Client) setBootConfigRole(ctx context.Context, role bootConfigRole) error {
 	bootConfigRef, err := c.getBootConfigSettingRef(ctx, "Intel(r) AMT: Boot Configuration 0")
@@ -34,11 +34,7 @@ func (c *Client) setBootConfigRole(ctx context.Context, role bootConfigRole) err
 	message.AddParameter(bootConfigSetting)
 	message.Parameters("Role", strconv.Itoa(int(role)))
 
-	_, err = sendMessageForReturnValueInt(ctx, message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return sendMessageForReturnValueInt(ctx, message)
 }
 
 func (c *Client) changeBootOrder(ctx context.Context, items []string) error {
@@ -55,11 +51,7 @@ func (c *Client) changeBootOrder(ctx context.Context, items []string) error {
 		message.AddParameter(sourceParam)
 	}
 
-	_, err := sendMessageForReturnValueInt(ctx, message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return sendMessageForReturnValueInt(ctx, message)
 }
 
 func (c *Client) getBootSettingData(ctx context.Context) ([]*dom.Element, error) {
@@ -129,7 +121,7 @@ func (c *Client) SetPXE(ctx context.Context) error {
 		return err
 	}
 
-	err = c.setBootConfigRole(ctx, bootConfigRoleIsNextSingleUse)
+	err = c.setBootConfigRole(ctx, isNextSingleUse)
 	if err != nil {
 		return err
 	}

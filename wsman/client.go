@@ -21,7 +21,7 @@ limitations under the License.
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint: gosec // we're constrained to MD5 by Intel AMT
 	"crypto/rand"
 	"crypto/tls"
 	"fmt"
@@ -52,8 +52,8 @@ type challenge struct {
 }
 
 func h(data string) string {
-	hf := md5.New()
-	io.WriteString(hf, data)
+	hf := md5.New() //nolint: gosec // we're constrained to MD5 by Intel AMT
+	_, _ = io.WriteString(hf, data)
 	return fmt.Sprintf("%x", hf.Sum(nil))
 }
 
@@ -76,7 +76,9 @@ func (c *challenge) resp(method, uri, cnonce string) (string, error) {
 			c.Cnonce = cnonce
 		} else {
 			b := make([]byte, 8)
-			io.ReadFull(rand.Reader, b)
+			if _, err := io.ReadFull(rand.Reader, b); err != nil {
+				return "", err
+			}
 			c.Cnonce = fmt.Sprintf("%x", b)[:16]
 		}
 		return kd(c.ha1(), fmt.Sprintf("%s:%08x:%s:%s:%s",
@@ -150,7 +152,7 @@ func (c *challenge) parseChallenge(input string) error {
 		case "algorithm":
 			c.Algorithm = strings.Trim(r[1], qs)
 		case "qop":
-			//TODO(gavaletz) should be an array of strings?
+			// TODO(gavaletz) should be an array of strings?
 			c.Qop = strings.Trim(r[1], qs)
 		default:
 			return fmt.Errorf("challenge is bad, unexpected token: %s", sl)
@@ -199,7 +201,7 @@ func NewClient(ctx context.Context, log logr.Logger, target, username, password 
 	}
 	// res.Timeout = 10 * time.Second
 	res.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // not handling certs right now
 	}
 	if res.useDigest {
 		res.challenge = &challenge{Username: res.username, Password: res.password}
@@ -211,6 +213,7 @@ func NewClient(ctx context.Context, log logr.Logger, target, username, password 
 		if err != nil {
 			return nil, fmt.Errorf("unable to perform digest auth with %s: %v", res.target, err)
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode != 401 {
 			return nil, fmt.Errorf("no digest auth at %s", res.target)
 		}
@@ -229,7 +232,7 @@ func (c *Client) Endpoint() string {
 // Post overrides http.Client's Post method and adds digext auth handling
 // and SOAP pre and post processing.
 func (c *Client) Post(ctx context.Context, msg *soap.Message) (response *soap.Message, err error) {
-	req, err := http.NewRequest("POST", c.target, msg.Reader())
+	req, err := http.NewRequestWithContext(ctx, "POST", c.target, msg.Reader())
 	if err != nil {
 		return nil, err
 	}
@@ -245,13 +248,13 @@ func (c *Client) Post(ctx context.Context, msg *soap.Message) (response *soap.Me
 		}
 	}
 	req.Header.Add("content-type", soap.ContentType)
-	req = req.WithContext(ctx)
 	c.Logger.V(1).Info("debug", "request", req, "body", msg.String())
 
 	res, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 	if c.useDigest && res.StatusCode == 401 {
 		c.Logger.V(1).Info("Digest reauthorizing")
 		if err := c.challenge.parseChallenge(res.Header.Get("WWW-Authenticate")); err != nil {
@@ -261,7 +264,7 @@ func (c *Client) Post(ctx context.Context, msg *soap.Message) (response *soap.Me
 		if err != nil {
 			return nil, fmt.Errorf("failed digest auth %v", err)
 		}
-		req, err = http.NewRequest("POST", c.target, msg.Reader())
+		req, err = http.NewRequestWithContext(ctx, "POST", c.target, msg.Reader())
 		if err != nil {
 			return nil, err
 		}
@@ -271,13 +274,12 @@ func (c *Client) Post(ctx context.Context, msg *soap.Message) (response *soap.Me
 		if err != nil {
 			return nil, err
 		}
+		defer res.Body.Close()
 	}
-
-	defer res.Body.Close()
 
 	if res.StatusCode >= 400 {
 		b, _ := ioutil.ReadAll(res.Body)
-		return nil, fmt.Errorf("wsman.Client: post recieved %v\n'%v'", res.Status, string(b))
+		return nil, fmt.Errorf("wsman.Client: post received %v\n'%v'", res.Status, string(b))
 	}
 	response, err = soap.Parse(res.Body)
 	if err != nil {
@@ -295,6 +297,6 @@ func (c *Client) Post(ctx context.Context, msg *soap.Message) (response *soap.Me
 // Note that identify uses soap.Message directly instead of wsman.Message.
 func (c *Client) Identify(ctx context.Context) (*soap.Message, error) {
 	message := soap.NewMessage()
-	message.SetBody(dom.Elem("Identify", NS_WSMID))
+	message.SetBody(dom.Elem("Identify", NSWSMID))
 	return c.Post(ctx, message)
 }

@@ -16,7 +16,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	client := iamt.NewClient(defaultLogger("info"), "127.0.0.1", "", "admin", "admin")
+	client := iamt.NewClient(defaultLogger(0), "127.0.0.1", "", "admin", "admin")
 	if err := client.Open(ctx); err != nil {
 		panic(err)
 	}
@@ -28,8 +28,8 @@ func main() {
 	fmt.Println("Is powered on?", on)
 }
 
-func defaultLogger(level string) logr.Logger {
-	stdr.SetVerbosity(0)
+func defaultLogger(level int) logr.Logger {
+	stdr.SetVerbosity(level)
 
 	return stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags), stdr.Options{LogCaller: stdr.All})
 }

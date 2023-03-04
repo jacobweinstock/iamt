@@ -57,20 +57,19 @@ func getReturnValueInt(response *wsman.Message) (int, error) {
 	return strconv.Atoi(string(returnElement.Content))
 }
 
-func sendMessageForReturnValueInt(ctx context.Context, message *wsman.Message) (int, error) {
+func sendMessageForReturnValueInt(ctx context.Context, message *wsman.Message) error {
 	response, err := message.Send(ctx)
 	if err != nil {
-		return -1, err
+		return err
 	}
 	returnValue, err := getReturnValueInt(response)
-
 	if err != nil {
-		return -1, err
+		return err
 	}
 
 	if returnValue == 0 {
-		return returnValue, nil
+		return nil
 	}
 
-	return returnValue, fmt.Errorf("received invalid return value %d", returnValue)
+	return fmt.Errorf("received invalid return value %d", returnValue)
 }

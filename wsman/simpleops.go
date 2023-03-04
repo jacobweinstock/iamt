@@ -18,15 +18,16 @@ limitations under the License.
 
 import (
 	"fmt"
-	"github.com/VictorLowther/simplexml/dom"
-	"github.com/VictorLowther/simplexml/search"
 	"path"
 	"strings"
+
+	"github.com/VictorLowther/simplexml/dom"
+	"github.com/VictorLowther/simplexml/search"
 )
 
 // Invoke creates a wsman.Message that will invoke method on resource.
 // After creating the Message, you need to add the appropriate selectors
-// with msg.Selectors(), and the appropriate parameters with msg.Parameters()
+// with msg.Selectors(), and the appropriate parameters with msg.Parameters().
 func (c *Client) Invoke(resource, method string) *Message {
 	return c.NewMessage(resource + "/" + method).ResourceURI(resource)
 }
@@ -39,12 +40,12 @@ func (m *Message) InvokeResponse() (*dom.Element, string, error) {
 	method, resource := path.Split(strings.TrimSuffix(action, "Response"))
 	retbody := search.First(search.Tag(method+"_OUTPUT", resource), m.Body())
 	if retbody == nil {
-		return nil, "", fmt.Errorf("No %s_OUTPUT section in response", method)
+		return nil, "", fmt.Errorf("no %s_OUTPUT section in response", method)
 	}
 	returnValue := ""
 	retval := search.First(search.Tag("ReturnValue", resource), retbody.Children())
 	if retval == nil {
-		return retbody, "", fmt.Errorf("No ReturnValue in %s_OUTPUT", method)
+		return retbody, "", fmt.Errorf("no ReturnValue in %s_OUTPUT", method)
 	}
 	returnValue = string(retval.Content)
 	return retbody, returnValue, nil
@@ -53,7 +54,7 @@ func (m *Message) InvokeResponse() (*dom.Element, string, error) {
 // Get creates a wsman.Message that will get an instance
 // at the passed-in resource.
 func (c *Client) Get(resource string) *Message {
-	return c.NewMessage(GET).ResourceURI(resource)
+	return c.NewMessage(Get).ResourceURI(resource)
 }
 
 func (m *Message) GetItem() (*dom.Element, error) {
@@ -61,15 +62,15 @@ func (m *Message) GetItem() (*dom.Element, error) {
 	if err != nil {
 		return nil, err
 	}
-	if action != GET+"Response" {
-		return nil, fmt.Errorf("Not a GetResponse message")
+	if action != Get+"Response" {
+		return nil, fmt.Errorf("not a GetResponse message")
 	}
 	if err != nil {
 		return nil, err
 	}
 	b := m.Body()
 	if len(b) == 0 {
-		return nil, fmt.Errorf("No SOAP body elements")
+		return nil, fmt.Errorf("no SOAP body elements")
 	}
 	return b[0], nil
 }
@@ -78,19 +79,19 @@ func (m *Message) GetItem() (*dom.Element, error) {
 // resource.  The updated resource should be passed in as the
 // only element in the Body of the messate.
 func (c *Client) Put(resource string) *Message {
-	return c.NewMessage(PUT).ResourceURI(resource)
+	return c.NewMessage(Put).ResourceURI(resource)
 }
 
 // Create creates a wsman.Message that will update the passed-in
 // resource.  The updated resource should be passed in as the
 // only element in the Body of the messate.
 func (c *Client) Create(resource string) *Message {
-	return c.NewMessage(CREATE).ResourceURI(resource)
+	return c.NewMessage(Create).ResourceURI(resource)
 }
 
 // Delete creates a wsman.Message that will update the passed-in
 // resource.  The updated resource should be passed in as the
 // only element in the Body of the messate.
 func (c *Client) Delete(resource string) *Message {
-	return c.NewMessage(DELETE).ResourceURI(resource)
+	return c.NewMessage(Delete).ResourceURI(resource)
 }
