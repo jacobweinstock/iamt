@@ -74,13 +74,14 @@ func NewClient(host, user, passwd string, opts ...Option) *Client {
 	return defaultClient
 }
 
+// Open the client.
 func (c *Client) Open(ctx context.Context) error {
 	return c.conn.Open(ctx)
 }
 
 // Close the client.
-func (c *Client) Close(_ context.Context) error {
-	return nil
+func (c *Client) Close(ctx context.Context) error {
+	return c.conn.Close(ctx)
 }
 
 // PowerOn will power on a given machine.

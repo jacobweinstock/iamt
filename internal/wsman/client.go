@@ -113,9 +113,9 @@ func (c *Client) Open(ctx context.Context) error {
 	return nil
 }
 
-// Endpoint returns the endpoint that the Client will try to communicate with.
-func (c *Client) Endpoint() string {
-	return c.target
+func (c *Client) Close() error {
+	c.challenge = nil
+	return nil
 }
 
 // Post overrides http.Client's Post method and adds digest auth handling

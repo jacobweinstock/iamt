@@ -15,3 +15,7 @@ type Client struct {
 func (c *Client) Open(ctx context.Context) error {
 	return c.WsmanClient.Open(ctx)
 }
+
+func (c *Client) Close(ctx context.Context) error {
+	return c.WsmanClient.Close()
+}
