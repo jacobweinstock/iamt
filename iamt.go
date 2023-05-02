@@ -3,6 +3,7 @@ package iamt
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -13,42 +14,68 @@ import (
 // Client used to perform actions on the machine.
 type Client struct {
 	Host   string
-	Port   uint32
-	Path   string
-	User   string
-	Pass   string
 	Logger logr.Logger
+	Pass   string
+	Path   string
+	Port   uint32
+	Scheme string
+	User   string
 
 	connMu sync.Mutex
 	conn   internal.Client
 }
 
-// NewClient creates an amt client to use.
-func NewClient(log logr.Logger, host, path, user, passwd string) *Client {
-	if path == "" {
-		path = "/wsman"
-	}
+// Option for setting optional Client values
+type Option func(*Client)
 
-	logger := logr.Discard()
-	if log.GetSink() != nil {
-		logger = log
-	}
-
-	return &Client{
-		Host:   host,
-		Port:   16992,
-		Path:   path,
-		User:   user,
-		Pass:   passwd,
-		Logger: logger,
-		conn:   internal.Client{Log: logger},
+func WithScheme(scheme string) Option {
+	return func(c *Client) {
+		c.Scheme = scheme
 	}
 }
 
+func WithLogger(logger logr.Logger) Option {
+	return func(c *Client) {
+		c.Logger = logger
+	}
+}
+
+func WithPort(port uint32) Option {
+	return func(c *Client) {
+		c.Port = port
+	}
+}
+
+func WithPath(path string) Option {
+	return func(c *Client) {
+		c.Path = path
+	}
+}
+
+// NewClient creates an amt client to use.
+func NewClient(host, user, passwd string, opts ...Option) *Client {
+	defaultClient := &Client{
+		Logger: logr.Discard(),
+		Path:   "/wsman",
+		Port:   16992,
+		Scheme: "http",
+	}
+
+	for _, opt := range opts {
+		opt(defaultClient)
+	}
+
+	defaultClient.Host = host
+	defaultClient.User = user
+	defaultClient.Pass = passwd
+	defaultClient.conn = internal.Client{Log: defaultClient.Logger}
+
+	return defaultClient
+}
+
 func (c *Client) Open(ctx context.Context) error {
-	// TODO: add support for https
-	target := fmt.Sprintf("http://%s:%d%s", c.Host, c.Port, c.Path)
-	wsmanClient, err := wsman.NewClient(ctx, c.Logger, target, c.User, c.Pass, true)
+	target := url.URL{Scheme: c.Scheme, Host: c.Host + ":" + fmt.Sprint(c.Port), Path: c.Path}
+	wsmanClient, err := wsman.NewClient(ctx, c.Logger, target.String(), c.User, c.Pass, true)
 	if err != nil {
 		return err
 	}
