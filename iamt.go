@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/jacobweinstock/iamt/internal"
@@ -21,8 +20,7 @@ type Client struct {
 	Scheme string
 	User   string
 
-	connMu sync.Mutex
-	conn   internal.Client
+	conn internal.Client
 }
 
 // Option for setting optional Client values.

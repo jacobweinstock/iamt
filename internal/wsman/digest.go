@@ -1,7 +1,7 @@
 package wsman
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint: gosec // we're constrained to MD5 by Intel AMT
 	"crypto/rand"
 	"fmt"
 	"io"
