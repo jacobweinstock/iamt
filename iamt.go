@@ -25,7 +25,7 @@ type Client struct {
 	conn   internal.Client
 }
 
-// Option for setting optional Client values
+// Option for setting optional Client values.
 type Option func(*Client)
 
 func WithScheme(scheme string) Option {
@@ -70,21 +70,14 @@ func NewClient(host, user, passwd string, opts ...Option) *Client {
 	defaultClient.Pass = passwd
 	defaultClient.conn = internal.Client{Log: defaultClient.Logger}
 
+	target := &url.URL{Scheme: defaultClient.Scheme, Host: host + ":" + fmt.Sprint(defaultClient.Port), Path: defaultClient.Path}
+	defaultClient.conn.WsmanClient = wsman.NewClient(target, user, passwd)
+
 	return defaultClient
 }
 
 func (c *Client) Open(ctx context.Context) error {
-	target := url.URL{Scheme: c.Scheme, Host: c.Host + ":" + fmt.Sprint(c.Port), Path: c.Path}
-	wsmanClient, err := wsman.NewClient(ctx, c.Logger, target.String(), c.User, c.Pass, true)
-	if err != nil {
-		return err
-	}
-
-	c.connMu.Lock()
-	c.conn.WsmanClient = wsmanClient
-	c.connMu.Unlock()
-
-	return nil
+	return c.conn.Open(ctx)
 }
 
 // Close the client.

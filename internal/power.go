@@ -87,11 +87,6 @@ func (c *Client) getPowerStatus(ctx context.Context) (*powerStatus, error) {
 	return status, nil
 }
 
-type Client struct {
-	Log         logr.Logger
-	WsmanClient *wsman.Client
-}
-
 func (c *Client) PowerOn(ctx context.Context) error {
 	isOn, err := c.IsPoweredOn(ctx)
 	if err != nil {

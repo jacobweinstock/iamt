@@ -16,7 +16,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	client := iamt.NewClient(defaultLogger(0), "127.0.0.1", "", "admin", "admin")
+	client := iamt.NewClient("127.0.0.1", "admin", "admin", iamt.WithLogger(defaultLogger(0)))
 	if err := client.Open(ctx); err != nil {
 		panic(err)
 	}
