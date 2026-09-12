@@ -1,0 +1,16 @@
+The digest authentication code in this package originated in the vendored
+WSMAN library that used to live at internal/wsman, a fork of
+github.com/ammmze/wsman, and is distributed under the Apache License 2.0 in
+LICENSE alongside this file.
+
+The rest of this repository is MIT licensed; see the LICENSE at the repository
+root. This directory keeps its own LICENSE because those terms differ.
+
+digest.go additionally derives from:
+  https://code.google.com/p/mlab-ns2/source/browse/gae/ns/digest/digest.go
+
+The remainder of the former internal/wsman package -- its SOAP message
+construction, enumeration and transport -- was removed when this library moved
+to github.com/device-management-toolkit/go-wsman-messages. Only the digest
+authentication code was retained, because go-wsman-messages' challenge parser
+mis-reads the malformed WWW-Authenticate headers some Intel NUCs emit.

@@ -1,4 +1,4 @@
-package wsman
+package digest
 
 import "testing"
 

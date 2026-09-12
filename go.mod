@@ -1,18 +1,18 @@
 module github.com/jacobweinstock/iamt
 
-go 1.20
+go 1.25.0
 
 require (
-	github.com/VictorLowther/simplexml v0.0.0-20180716164440-0bff93621230
-	github.com/VictorLowther/soap v0.0.0-20150314151524-8e36fca84b22
+	github.com/device-management-toolkit/go-wsman-messages/v2 v2.50.3
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/stdr v1.2.2
-	github.com/satori/go.uuid v1.2.0
-	github.com/stretchr/testify v1.7.0
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.0 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/sirupsen/logrus v1.10.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

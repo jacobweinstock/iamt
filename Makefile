@@ -1,19 +1,12 @@
 .ONESHELL:
 
-build: bin/stringer generate-strings
+.PHONY: build
+build:
+	go build ./...
 
-bin/stringer:
-	mkdir -p bin
-	cd bin
-	go mod init tmp || true
-	export GOBIN=$${PWD}
-	go get golang.org/x/tools/cmd/stringer
-	go install golang.org/x/tools/cmd/stringer
-	rm -rf go.mod go.sum
-
-generate-strings: 
-	PATH=$$PATH:$${PWD}/bin
-	go generate ./...
+.PHONY: test
+test:
+	go test -race ./...
 
 # BEGIN: lint-install
 # http://github.com/jacobweinstock/iamt

@@ -1,6 +1,6 @@
-// Package wsman provides digest authentication for Intel AMT.
+// Package digest implements HTTP digest authentication for Intel AMT.
 // This is a patched version that handles malformed headers from some Intel NUCs.
-package wsman
+package digest
 
 import (
 	"crypto/md5" //nolint: gosec // we're constrained to MD5 by Intel AMT
