@@ -2,6 +2,7 @@ package iamt
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/url"
 
@@ -19,6 +20,9 @@ type Client struct {
 	Port   uint32
 	Scheme string
 	User   string
+	// TLSConfig is used for https targets; nil keeps the historical default
+	// (no certificate verification).
+	TLSConfig *tls.Config
 
 	conn internal.Client
 }
@@ -41,6 +45,14 @@ func WithLogger(logger logr.Logger) Option {
 func WithPort(port uint32) Option {
 	return func(c *Client) {
 		c.Port = port
+	}
+}
+
+// WithTLSConfig sets the TLS configuration for https targets, e.g.
+// &tls.Config{RootCAs: pool} to verify the AMT certificate against a CA.
+func WithTLSConfig(cfg *tls.Config) Option {
+	return func(c *Client) {
+		c.TLSConfig = cfg
 	}
 }
 
@@ -69,7 +81,7 @@ func NewClient(host, user, passwd string, opts ...Option) *Client {
 	defaultClient.conn = internal.Client{Log: defaultClient.Logger}
 
 	target := &url.URL{Scheme: defaultClient.Scheme, Host: host + ":" + fmt.Sprint(defaultClient.Port), Path: defaultClient.Path}
-	defaultClient.conn.WsmanClient = wsman.NewClient(target, user, passwd)
+	defaultClient.conn.WsmanClient = wsman.NewClient(target, user, passwd, wsman.WithTLSConfig(defaultClient.TLSConfig))
 
 	return defaultClient
 }

@@ -38,6 +38,7 @@ type Client struct {
 	Logger       logr.Logger
 
 	httpClient *http.Client
+	tlsConfig  *tls.Config
 	target     string
 	targetPath string
 	username   string
@@ -58,6 +59,14 @@ func WithLogger(logger logr.Logger) Option {
 func WithUseDigest(useDigest bool) Option {
 	return func(c *Client) {
 		c.useDigest = useDigest
+	}
+}
+
+// WithTLSConfig sets the TLS configuration used for https targets. A nil config keeps the
+// historical default (certificate verification disabled).
+func WithTLSConfig(cfg *tls.Config) Option {
+	return func(c *Client) {
+		c.tlsConfig = cfg
 	}
 }
 
@@ -82,9 +91,14 @@ func NewClient(host *url.URL, username, password string, opts ...Option) *Client
 	defaultClient.targetPath = host.Path
 	defaultClient.username = username
 	defaultClient.password = password
+	tlsConfig := defaultClient.tlsConfig
+	if tlsConfig == nil {
+		// Backwards compatible default. Callers that can verify the AMT certificate
+		// (a CA that signed it, or the certificate itself) should pass WithTLSConfig.
+		tlsConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // opt-in verification via WithTLSConfig
+	}
 	defaultClient.httpClient.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // not handling certs right now
-
+		TLSClientConfig: tlsConfig,
 	}
 
 	return defaultClient
